@@ -2202,7 +2202,7 @@ typedef struct{
         uint32 gc_map_offset_;
     } else if (global_version[0] == '0' && global_version[1] == '6') {
         uint32 code_offset_;
-    } else if (global_version[0] == '0' && global_version[1] == '7') {
+    } else if (global_version[1] == '7' || global_version[1] == '8') {
         uint32 code_offset_;
     } else {
         uint32 code_offset_;
@@ -2236,7 +2236,7 @@ typedef struct{
 typedef struct (int index) {
     local int dexIndex = parentof(this).dexIndex;
     local int t_index = index;
-    if (global_version[0] == '0' &&  (global_version[1] == '3' || global_version[1] == '6')) {
+    if (global_version[0] == '0' &&  (global_version[1] == '3' || global_version[1] == '6' || global_version[1] == '7')) {
         uint16 status;
         uint16 type;
         if (type == 0) {
@@ -2427,11 +2427,17 @@ typedef struct {
 	// OatClasses oat_classes(dex_file.class_defs_size) ;
     // FSeek(off + dex_file.class_defs_size*4);
     local uint32 classDefsSize = getClassDefsSize(dex_file_offset);
-    if (global_version[1] != '7') {
         defsSize[dexCount] = classDefsSize;
-	    uint32 class_offs[classDefsSize];
-    }
     dexCount += 1;
+    if (global_version[1] == '7') {
+      uint32 classoffspointers[2];
+      local uint32 cur = FTell();
+      FSeek(classoffspointers[0] + 0x1000);
+      uint32 class_offs[classDefsSize];
+      FSeek(cur);
+    }
+    else
+	  uint32 class_offs[classDefsSize];
 	
 } OatDexFile <optimize=false>;
 
@@ -2452,9 +2458,8 @@ typedef struct {
     global_version[1] = version[1];
     global_version[2] = version[2];
     global_version[3] = version[3];
-    if (version[0] == '0' &&  version[1] == '7') {
-        uint32 unknown0;
-    }
+    if (version[1] == '7' || version[1] == '8')
+        uint32 unused;
 	uint32 dex_file_count;
 	uint32 executable_offset_;
 	uint32 interpreter_to_interpreter_bridge_offset_;
@@ -2462,18 +2467,6 @@ typedef struct {
 	uint32 jni_dlsym_lookup_offset_;
 
     if (version[0] == '0' &&  version[1] == '6') {
-        uint32 quick_generic_jni_trampoline_offset_;
-        uint32 quick_imt_conflict_trampoline_offset_;
-        uint32 quick_resolution_trampoline_offset_;
-        uint32 quick_to_interpreter_bridge_offset_;
-        int32 image_patch_delta_;
-        uint32 image_file_location_oat_checksum_;
-        uint32 image_file_location_oat_data_begin_;
-        uint32 key_value_store_size_;
-        char   key_value_store_[key_value_store_size_];
-        //uint32 key_value_store_;
-        //uchar key_value_store_[0]; 
-    } else if (version[0] == '0' &&  version[1] == '7') {
         uint32 quick_generic_jni_trampoline_offset_;
         uint32 quick_imt_conflict_trampoline_offset_;
         uint32 quick_resolution_trampoline_offset_;
@@ -2516,10 +2509,11 @@ typedef struct {
         
 	    uint32 image_file_location_oat_checksum_;
 	    uint32 image_file_location_oat_data_begin_;
+        if (version[1] == '7' || version[1] == '8')
+            uint32 unused;
 	    uint32 image_file_location_size;
 	    char   image_file_location_data[image_file_location_size];
     }
-    
 } OatHeader;
 
 struct {
@@ -2600,8 +2594,8 @@ struct {
     OatDexFile oat_dex_files[oat_header.dex_file_count];
     FSeek( oat_dex_files[0].dex_file_offset + oatdata_off );
 	DexFile dex_files[dexCount];
-    if (global_version[1] == '7') {
-    oatClassOffs = oat_dex_files[0].class_offsets_offset_ + oatdata_off;
+    if (global_version[1] == '7' || global_version[1] == '8') {
+    oatClassOffs = oat_dex_files[0].class_offs[0] + oatdata_off + 4;
     Printf("%x\n", oatClassOffs);
     }
     else {
